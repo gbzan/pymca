@@ -153,6 +153,17 @@ class ScanWindow(PlotWindow.PlotWindow):
         self.outputFilter = None
 
         #signals
+        if hasattr(self, "derivateToolButton"):
+            # create the derivatives menu
+            self.derivateToolButton.setPopupMode(qt.QToolButton.DelayedPopup)
+            self.derivateOptionSelected = None
+            self.derivateMenu = qt.QMenu()
+            for item in self.simpleMath.derivateOptions:
+                self.derivateMenu.addAction(item)
+
+            self.derivateToolButton.setMenu(self.derivateMenu)
+            self.derivateToolButton.triggered.connect(self._derivateTriggered)
+
         # this one was made in the base class
         #self.setCallback(self.graphCallback)
         if fit:
@@ -167,6 +178,13 @@ class ScanWindow(PlotWindow.PlotWindow):
                                    self._simpleFitSignal)
             self.fitButtonMenu.addAction(QString("Customized Fit") ,
                                    self._customFitSignal)
+
+    def _derivateTriggered(self, action):
+        text = action.text()
+        tip = "Take %s derivative of active curve" % text
+        self.derivateToolButton.setToolTip(tip)
+        self.derivateOptionSelected = text
+        self._deriveIconSignal()
 
     def _toggleInfoWidget(self):
         if self.infoDockWidget.isHidden():
@@ -254,7 +272,7 @@ class ScanWindow(PlotWindow.PlotWindow):
             if not hasattr(dataObject, 'x'):
                 ylen = len(dataObject.y[0])
                 if ylen:
-                    xdata = numpy.arange(ylen).astype(numpy.float)
+                    xdata = numpy.arange(ylen).astype(numpy.float64)
                 else:
                     #nothing to be plot
                     continue
@@ -263,7 +281,7 @@ class ScanWindow(PlotWindow.PlotWindow):
                 if not ylen:
                     # nothing to be plot
                     continue
-                xdata = numpy.arange(ylen).astype(numpy.float)
+                xdata = numpy.arange(ylen).astype(numpy.float64)
             elif len(dataObject.x) > 1:
                 _logger.debug("Mesh plots. Ignoring")
                 continue
@@ -285,7 +303,7 @@ class ScanWindow(PlotWindow.PlotWindow):
                     ylabel = None
                     ycounter += 1
                     if dataObject.m is None:
-                        mdata = [numpy.ones(len(ydata)).astype(numpy.float)]
+                        mdata = [numpy.ones(len(ydata)).astype(numpy.float64)]
                     elif len(dataObject.m[0]) > 0:
                         if len(dataObject.m[0]) == len(ydata):
                             index = numpy.nonzero(dataObject.m[0])[0]
@@ -299,7 +317,7 @@ class ScanWindow(PlotWindow.PlotWindow):
                         else:
                             raise ValueError("Monitor data length different than counter data")
                     else:
-                        mdata = [numpy.ones(len(ydata)).astype(numpy.float)]
+                        mdata = [numpy.ones(len(ydata)).astype(numpy.float64)]
                     ylegend = 'y%d' % ycounter
                     if dataObject.info['selection'] is not None:
                         if type(dataObject.info['selection']) == type({}):
@@ -338,9 +356,9 @@ class ScanWindow(PlotWindow.PlotWindow):
                     ylen = len(ydata)
                     if ylen == 1:
                         if len(xdata) > 1:
-                            ydata = ydata[0] * numpy.ones(len(xdata)).astype(numpy.float)
+                            ydata = ydata[0] * numpy.ones(len(xdata)).astype(numpy.float64)
                     elif len(xdata) == 1:
-                        xdata = xdata[0] * numpy.ones(ylen).astype(numpy.float)
+                        xdata = xdata[0] * numpy.ones(ylen).astype(numpy.float64)
                     ycounter += 1
                     newDataObject = DataObject.DataObject()
                     newDataObject.info = copy.deepcopy(dataObject.info)
@@ -351,7 +369,7 @@ class ScanWindow(PlotWindow.PlotWindow):
                                 dataObject.m[imon] = \
                                              numpy.array([dataObject.m[imon]])
                     if dataObject.m is None:
-                        mdata = numpy.ones(len(ydata)).astype(numpy.float)
+                        mdata = numpy.ones(len(ydata)).astype(numpy.float64)
                     elif len(dataObject.m[0]) > 0:
                         if len(dataObject.m[0]) == len(ydata):
                             index = numpy.nonzero(dataObject.m[0])[0]
@@ -363,7 +381,7 @@ class ScanWindow(PlotWindow.PlotWindow):
                             #A priori the graph only knows about plots
                             ydata = ydata/mdata
                         elif len(dataObject.m[0]) == 1:
-                            mdata = numpy.ones(len(ydata)).astype(numpy.float)
+                            mdata = numpy.ones(len(ydata)).astype(numpy.float64)
                             mdata *= dataObject.m[0][0]
                             index = numpy.nonzero(dataObject.m[0])[0]
                             if not len(index):
@@ -376,7 +394,7 @@ class ScanWindow(PlotWindow.PlotWindow):
                         else:
                             raise ValueError("Monitor data length different than counter data")
                     else:
-                        mdata = numpy.ones(len(ydata)).astype(numpy.float)
+                        mdata = numpy.ones(len(ydata)).astype(numpy.float64)
                     newDataObject.x = [xdata]
                     newDataObject.y = [ydata]
                     newDataObject.m = [mdata]
@@ -634,7 +652,7 @@ class ScanWindow(PlotWindow.PlotWindow):
             yplot = ddict['yfit']
             newDataObject.x = [xplot]
             newDataObject.y = [yplot]
-            newDataObject.m = [numpy.ones(len(yplot)).astype(numpy.float)]
+            newDataObject.m = [numpy.ones(len(yplot)).astype(numpy.float64)]
 
             #here I should check the log or linear status
             self.dataObjectsDict[newDataObject.info['legend']] = newDataObject
@@ -653,7 +671,7 @@ class ScanWindow(PlotWindow.PlotWindow):
             yplot = self.scanFit.specfit.gendata(parameters=ddict['data'])
             newDataObject.x = [xplot]
             newDataObject.y = [yplot]
-            newDataObject.m = [numpy.ones(len(yplot)).astype(numpy.float)]
+            newDataObject.m = [numpy.ones(len(yplot)).astype(numpy.float64)]
 
             self.dataObjectsDict[newDataObject.info['legend']] = newDataObject
             self.addCurve(x=xplot, y=yplot, legend=newDataObject.info['legend'])
@@ -916,7 +934,7 @@ class ScanWindow(PlotWindow.PlotWindow):
             if dataObject.x is not None:
                 x = dataObject.x[0]
             else:
-                x = numpy.arange(len(y)).astype(numpy.float)
+                x = numpy.arange(len(y)).astype(numpy.float64)
             ilabel = dataObject.info['selection']['y'][0]
             ylabel = dataObject.info['LabelNames'][ilabel]
             if len(dataObject.info['selection']['x']):
@@ -979,7 +997,8 @@ class ScanWindow(PlotWindow.PlotWindow):
         if operation == "derivate":
             #xmin and xmax
             xlimits=self.getGraphXLimits()
-            xplot, yplot = self.simpleMath.derivate(x, y, xlimits=xlimits)
+            xplot, yplot = self.simpleMath.derivate(x, y, xlimits=xlimits,
+                                                    option=self.derivateOptionSelected)
             ilabel = dataObject.info['selection']['y'][0]
             ylabel = dataObject.info['LabelNames'][ilabel]
             newDataObject.info['LabelNames'][ilabel] = ylabel+"'"
@@ -1065,7 +1084,7 @@ class ScanWindow(PlotWindow.PlotWindow):
         if operation not in ["fit", "custom_fit"]:
             newDataObject.x = [xplot]
             newDataObject.y = [yplot]
-            newDataObject.m = [numpy.ones(len(yplot)).astype(numpy.float)]
+            newDataObject.m = [numpy.ones(len(yplot)).astype(numpy.float64)]
 
         #and add it to the plot
         if True and (operation not in ['fit', 'custom_fit']):

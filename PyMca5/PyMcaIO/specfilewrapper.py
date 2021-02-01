@@ -2,7 +2,7 @@
 #
 # The PyMca X-Ray Fluorescence Toolkit
 #
-# Copyright (c) 2004-2020 European Synchrotron Radiation Facility
+# Copyright (c) 2004-2021 European Synchrotron Radiation Facility
 #
 # This file is part of the PyMca X-ray Fluorescence Toolkit developed at
 # the ESRF by the Software group.
@@ -96,7 +96,6 @@ def Specfile(filename):
                     float(s[0])
                     f.close()
                     output = specfilewrapper(filename, dta=True)
-                    f.close()
                     return output
                 except:
                     #try to read in other way
@@ -177,8 +176,9 @@ class specfilewrapper(object):
         if dta is None:
             dta = False
         self.amptek = amptek
-        self.qxas   = qxas
+        self.qxas = qxas
         self.dta = dta
+        self.ketek = None
         self.header = []
         if self.dta:
             #TwinMic .dta files with only one spectrum
@@ -276,7 +276,7 @@ class specfilewrapper(object):
                 line = f.readline().replace("\n","")
             nlines = len(outdata)
             f.close()
-            self.data = numpy.resize(numpy.array(outdata).astype(numpy.float),(nlines,1))
+            self.data = numpy.resize(numpy.array(outdata).astype(numpy.float64),(nlines,1))
         else:
             if sys.version < '3.0':
                 line = line.replace(",","  ")
@@ -337,7 +337,7 @@ class specfilewrapper(object):
                     line = line.replace(bytes('"',"utf-8"), bytes("", "utf-8"))
                     line = line.replace(bytes('\n\n',"utf-8"), tmpBytes)
             f.close()
-            self.data = numpy.resize(numpy.array(outdata).astype(numpy.float),(nlines,ncol0))
+            self.data = numpy.resize(numpy.array(outdata).astype(numpy.float64),(nlines,ncol0))
         if self.amptek:
             self.scandata=[myscandata(self.data,'MCA','1.1',
                                       scanheader=self.header)]
@@ -352,14 +352,50 @@ class specfilewrapper(object):
                     labels = self.header[0].split("  ")
                     if len(labels) != ncol0:
                         labels = None
-            self.scandata=[myscandata(self.data,'SCAN','1.1',
+            # check if it is a KETEK AXAS-D file
+            ketek_keys = ["File Version = ",
+                          "Livetime = ",
+                          "Realtime = ",
+                          "= KETEK"]
+            ketek_counter = 0
+            live_time = None
+            real_time = None
+            for line in self.header:
+                for key in ketek_keys:
+                    if key in line:
+                        keylower = line.lower()
+                        if keylower.startswith("livetime ="):
+                            tokens = line.split()
+                            if tokens[-1] == "s":
+                                live_time = float(tokens[2] + "." + tokens[3])
+                        elif keylower.startswith("realtime ="):
+                            tokens = line.split()
+                            if tokens[-1] == "s":
+                                real_time = float(tokens[2] + "." + tokens[3]) 
+                        ketek_counter += 1
+                        break
+            if ketek_counter == len(ketek_keys):
+                self.ketek = 1
+                if real_time and live_time:
+                    self._ketekHeader = {}
+                    self._ketekHeader['S'] = '#S1 '+ " Unlabelled Spectrum"
+                    self._ketekHeader['@CTIME'] = ['#@CTIME %f %f %f' % (real_time,
+                                                                         live_time,
+                                                                         real_time)]
+                else:
+                    self._ketekHeader = None
+                self.scandata=[myscandata(self.data,'MCA','1.1',
+                                      fileheader=self.header,
+                                      qxas=self._ketekHeader)]
+            else:
+                self.scandata=[myscandata(self.data,'SCAN','1.1',
                                       labels=labels,
                                       fileheader=self.header),
-                           myscandata(self.data,'MCA','2.1',
+                               myscandata(self.data,'MCA','2.1',
                                       fileheader=self.header)]
 
     def list(self):
-        if self.amptek or self.qxas or self.dta:
+        if self.amptek or self.qxas or self.dta or self.ketek:
             return "1:1"
         else:
             return "1:2"
@@ -375,7 +411,7 @@ class specfilewrapper(object):
         return self.__getitem__(int(n[0]) - 1)
 
     def scanno(self):
-        if self.amptek or self.qxas:
+        if self.amptek or self.qxas or self.dta or self.ketek:
             return 1
         else:
             return 2
@@ -395,7 +431,7 @@ class myscandata(object):
         #print shape(data)
         (rows, cols) = numpy.shape(data)
         if scantype == 'SCAN':
-            self.__data = numpy.zeros((rows, cols +1 ), numpy.float)
+            self.__data = numpy.zeros((rows, cols +1 ), numpy.float64)
             self.__data[:,0] = numpy.arange(rows) * 1.0
             self.__data[:,1:] = data * 1
             self.__cols = cols + 1
@@ -532,8 +568,8 @@ class myscandata(object):
                         gain = (y1-y0)/(x1-x0)
                         zero = y0 - gain * x0
                     else:
-                        x = numpy.zeros((n,), numpy.float)
-                        y = numpy.zeros((n,), numpy.float)
+                        x = numpy.zeros((n,), numpy.float64)
+                        y = numpy.zeros((n,), numpy.float64)
                         for i in range(n):
                             values = amptekCalibrationLines[i].split()
                             x[i], y[i] = map(float,values)

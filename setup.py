@@ -259,14 +259,18 @@ def build_FastEdf(ext_modules):
 
 
 def build_specfile(ext_modules):
-    if os.name.lower().startswith('posix'):
-        specfile_define_macros = [('PYMCA_POSIX', None)]
+    if sys.platform == "win32":
+        specfile_define_macros = [('WIN32', None),
+                                  ('SPECFILE_POSIX', None)]
+    elif os.name.lower().startswith('posix'):
+        specfile_define_macros = [('SPECFILE_POSIX', None)]
         # the best choice is to use _GNU_SOURCE if possible
         # because that enables the use of strtod_l
         if SPECFILE_USE_GNU_SOURCE:
             specfile_define_macros = [('_GNU_SOURCE', 1)]
     else:
         specfile_define_macros = define_macros
+
     srcfiles = ['sfheader', 'sfinit', 'sflists', 'sfdata', 'sfindex',
                 'sflabel', 'sfmca', 'sftools', 'locale_management',
                 'specfile_py']
@@ -546,6 +550,9 @@ if sys.platform not in ["win32", "darwin"]:
                 c_prog = "#include <GL/gl.h>\n int main()\n{return 0;}\n"
                 if subprocess.call("echo '%s' | gcc -x c - " % c_prog, shell=True):
                     HAS_OPENGL_HEADERS = False
+        gl_header_test = "a.out"
+        if os.path.exists(gl_header_test):
+            os.remove(gl_header_test)
 
 if HAS_OPENGL_HEADERS:
     build_Object3DCTools(ext_modules)

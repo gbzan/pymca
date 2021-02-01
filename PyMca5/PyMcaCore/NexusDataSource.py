@@ -452,7 +452,7 @@ class NexusDataSource(object):
                     output.info['MotorNames'] = []
                     output.info['MotorValues'] = []
                     for key in positioners.keys():
-                        if positioners[key].dtype == numpy.object:
+                        if positioners[key].dtype in [object, numpy.object_]:
                             # not a standard value
                             _logger.info("Skipping object key %s" % key)
                             continue
@@ -487,7 +487,7 @@ class NexusDataSource(object):
                     mcaselectiontype = selection['mcaselectiontype'].lower()
                     nSpectra = 1.0
                     for iDummy in data.shape[:-1]:
-                        data = data.sum(axis=0, dtype=numpy.float)
+                        data = data.sum(axis=0, dtype=numpy.float64)
                         nSpectra *= iDummy
                     if mcaselectiontype == "sum":
                         # sum already calculated

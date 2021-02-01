@@ -416,9 +416,9 @@ class PlotWindow(PlotWidget.PlotWidget):
                                 self._averageIconSignal,
                                  'Average Plotted Curves')
 
-            tb = self._addToolButton(self.deriveIcon,
-                                self._deriveIconSignal,
-                                 'Take Derivative of Active Curve')
+            self.derivateToolButton = self._addToolButton(self.deriveIcon,
+                                            self._deriveIconSignal,
+                                            'Take Derivative of Active Curve')
 
             tb = self._addToolButton(self.smoothIcon,
                                  self._smoothIconSignal,
@@ -1283,16 +1283,16 @@ class PlotWindow(PlotWidget.PlotWidget):
                 idx = nonzero((fromData <= xproc) &\
                                    (xproc <= toData))[0]
                 if len(idx):
-                    xw = xproc[idx].astype(numpy.float)
-                    yw = yproc[idx].astype(numpy.float)
-                    rawCounts = yw.sum(dtype=numpy.float)
+                    xw = xproc[idx].astype(numpy.float64)
+                    yw = yproc[idx].astype(numpy.float64)
+                    rawCounts = yw.sum(dtype=numpy.float64)
                     deltaX = xw[-1] - xw[0]
                     deltaY = yw[-1] - yw[0]
                     if deltaX > 0.0:
                         slope = (deltaY/deltaX)
                         background = yw[0] + slope * (xw - xw[0])
                         netCounts = rawCounts -\
-                                    background.sum(dtype=numpy.float)
+                                    background.sum(dtype=numpy.float64)
                     else:
                         netCounts = 0.0
                 else:

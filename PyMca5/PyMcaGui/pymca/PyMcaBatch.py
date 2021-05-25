@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #/*##########################################################################
-# Copyright (C) 2004-2020 European Synchrotron Radiation Facility
+# Copyright (C) 2004-2021 European Synchrotron Radiation Facility
 #
 # This file is part of the PyMca X-ray Fluorescence Toolkit developed at
 # the ESRF by the Software group.
@@ -24,7 +24,7 @@
 # THE SOFTWARE.
 #
 #############################################################################*/
-__author__ = "V.A. Sole - ESRF Data Analysis"
+__author__ = "V.A. Sole"
 __contact__ = "sole@esrf.fr"
 __license__ = "MIT"
 __copyright__ = "European Synchrotron Radiation Facility, Grenoble, France"
@@ -1000,7 +1000,9 @@ class McaBatchGUI(qt.QWidget):
             self.showMessage(text)
             self.__listView.clear()
             return selection
+        entryList = nexusWidget.getSelectedEntries()
         datasource = None
+        selection['entry'] = []
         selection['x'] = []
         selection['y'] = []
         selection['m'] = []
@@ -1008,6 +1010,8 @@ class McaBatchGUI(qt.QWidget):
             if len(cntSelection[key]):
                 for idx in cntSelection[key]:
                     selection[key].append(cntlist[idx])
+        for item in entryList:
+            selection['entry'].append(item[0])
         return selection
 
     def showMessage(self, text):
@@ -1094,6 +1098,22 @@ class McaBatchGUI(qt.QWidget):
                 else:
                     self.raise_()
                 return False
+        if len(self.fileList) == 1:
+            if HDF5SUPPORT:
+                try:
+                    if h5py.is_hdf5(self.fileList[0]):
+                        if os.path.dirname(os.path.abspath(self.fileList[0])) == \
+                           os.path.abspath(outputdir):
+                            msg = "Please specify a different output directory.\n"
+                            msg += "Risk of overwritting input file."
+                            qt.QMessageBox.critical(self,"ERROR", msg)
+                            if QTVERSION < '4.0.0':
+                                self.raiseW()
+                            else:
+                                self.raise_()
+                            return False
+                except:
+                    _logger.warning("Cannot verify suitability of output directory")
         return True
 
     def __getFileType(self,inputfile):
